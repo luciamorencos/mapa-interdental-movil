@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa Interdental - Versión Móvil</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            color: #222;
+        }
+
+        header {
+            background: #2c7be5;
+            color: white;
+            padding: 12px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        main {
+            padding: 15px;
+        }
+
+        .info-box {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .tooth-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .tooth {
+            background: #ffffff;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            text-align: center;
+            padding: 10px 5px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .tooth.active {
+            background: #2c7be5;
+            color: white;
+        }
+
+        footer {
+            text-align: center;
+            font-size: 12px;
+            padding: 10px;
+            color: #666;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #28a745;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        button:active {
+            opacity: 0.8;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    Mapa de Calibración Interdental
+</header>
+
+<main>
+
+    <div class="info-box">
+        <strong>Paciente:</strong> ___________________<br>
+        <strong>Fecha:</strong> ___________________
+    </div>
+
+    <div class="info-box">
+        <h3>Dientes</h3>
+
+        <div class="tooth-grid" id="toothGrid">
+            <!-- Generado por JS -->
+        </div>
+    </div>
+
+    <div class="info-box">
+        <h3>Observaciones</h3>
+        <textarea id="notes" rows="4" style="width:100%;border-radius:8px;padding:8px;"></textarea>
+    </div>
+
+    <button onclick="guardarDatos()">
+        Guardar registro
+    </button>
+
+</main>
+
+<footer>
+    Mi Guía Dental · Versión móvil
+</footer>
+
+
+<script>
+
+const teeth = [
+    18,17,16,15,14,13,12,11,
+    21,22,23,24,25,26,27,28,
+    48,47,46,45,44,43,42,41,
+    31,32,33,34,35,36,37,38
+];
+
+const selected = new Set();
+
+
+function crearDientes() {
+
+    const grid = document.getElementById("toothGrid");
+
+    teeth.forEach(num => {
+
+        const div = document.createElement("div");
+        div.className = "tooth";
+        div.textContent = num;
+
+        div.onclick = () => {
+            div.classList.toggle("active");
+
+            if(selected.has(num)){
+                selected.delete(num);
+            } else {
+                selected.add(num);
+            }
+        };
+
+        grid.appendChild(div);
+
+    });
+}
+
+
+function guardarDatos(){
+
+    const notas = document.getElementById("notes").value;
+
+    const data = {
+        fecha: new Date().toLocaleString(),
+        dientes: Array.from(selected),
+        observaciones: notas
+    };
+
+    const blob = new Blob(
+        [JSON.stringify(data, null, 2)],
+        { type: "application/json" }
+    );
+
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "registro_interdental.json";
+    a.click();
+
+    URL.revokeObjectURL(url);
+}
+
+
+crearDientes();
+
+</script>
+
+</body>
+</html>
