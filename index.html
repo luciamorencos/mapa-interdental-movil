@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mapa Calibración - Móvil</title>
+
+<style>
+body{
+margin:0;
+font-family:Arial, sans-serif;
+background:#f2f2f2;
+text-align:center;
+}
+
+#header{
+background:white;
+padding:8px;
+border-bottom:1px solid #ccc;
+position:sticky;
+top:0;
+z-index:50;
+}
+
+#header input{
+padding:5px;
+width:120px;
+}
+
+#container{
+position:relative;
+display:inline-block;
+margin-top:5px;
+}
+
+#bg{
+max-width:100%;
+height:auto;
+display:block;
+}
+
+canvas{
+position:absolute;
+top:0;
+left:0;
+touch-action:none;
+}
+
+#toolbar{
+position:fixed;
+bottom:0;
+left:0;
+width:100%;
+background:white;
+border-top:2px solid #ccc;
+padding:6px 4px;
+z-index:100;
+}
+
+.row{
+display:flex;
+justify-content:center;
+gap:6px;
+flex-wrap:wrap;
+margin-bottom:4px;
+}
+
+button{
+border:none;
+padding:7px 9px;
+border-radius:6px;
+font-weight:bold;
+font-size:13px;
+}
+
+.tool{
+background:#eee;
+}
+</style>
+</head>
+
+<body>
+
+<div id="header">
+<b>ID:</b>
+<input type="number" id="pid" placeholder="12345">
+</div>
+
+<div id="container">
+<img id="bg" src="mapa_bg.png">
+<canvas id="canvas"></canvas>
+</div>
+
+<div id="toolbar">
+
+<div><b>PRIME</b></div>
+<div class="row">
+<button style="background:#009FE3;color:white" onclick="setColor('#009FE3')">06</button>
+<button style="background:#E30613;color:white" onclick="setColor('#E30613')">07</button>
+<button style="background:#E6007E;color:white" onclick="setColor('#E6007E')">08</button>
+<button style="background:#FFD500" onclick="setColor('#FFD500')">09</button>
+<button style="background:#7CB518;color:white" onclick="setColor('#7CB518')">011</button>
+</div>
+
+<div><b>PERIO</b></div>
+<div class="row">
+<button style="background:#C00000;color:white" onclick="setColor('#C00000','P')">405</button>
+<button style="background:#FF5DA2;color:white" onclick="setColor('#FF5DA2','P')">406</button>
+<button style="background:#7A3DB8;color:white" onclick="setColor('#7A3DB8','P')">408</button>
+<button style="background:#003F6B;color:white" onclick="setColor('#003F6B','P')">410</button>
+</div>
+
+<div class="row">
+<button class="tool" onclick="setMode('erase')">✏️❌</button>
+<button class="tool" onclick="undo()">↩️</button>
+<button class="tool" onclick="saveImg()">💾</button>
+</div>
+
+</div>
+
+<script>
+const canvas=document.getElementById("canvas");
+const ctx=canvas.getContext("2d");
+const bg=document.getElementById("bg");
+
+let color="#000";
+let perio="";
+let mode="draw";
+let start=null;
+let history=[];
+
+bg.onload=()=>{
+canvas.width=bg.clientWidth;
+canvas.height=bg.clientHeight;
+};
+
+function setColor(c,p=""){
+color=c;
+perio=p;
+mode="draw";
+}
+
+function setMode(m){mode=m;}
+
+function pos(e){
+const r=canvas.getBoundingClientRect();
+const t=e.touches[0];
+return {x:t.clientX-r.left,y:t.clientY-r.top};
+}
+
+function save(){
+history.push(ctx.getImageData(0,0,canvas.width,canvas.height));
+}
+
+function undo(){
+if(history.length>0){
+ctx.putImageData(history.pop(),0,0);
+}
+}
+
+canvas.addEventListener("touchstart",e=>{
+e.preventDefault();
+const p=pos(e);
+
+if(mode==="erase"){
+save();
+ctx.clearRect(p.x-15,p.y-15,30,30);
+return;
+}
+start=p;
+});
+
+canvas.addEventListener("touchend",e=>{
+
+if(!start) return;
+
+const p=pos(e.changedTouches?e.changedTouches[0]:e);
+
+save();
+
+ctx.strokeStyle=color;
+ctx.lineWidth=5;
+ctx.lineCap="round";
+
+ctx.beginPath();
+ctx.moveTo(start.x,start.y);
+ctx.lineTo(p.x,p.y);
+ctx.stroke();
+
+const a=Math.atan2(p.y-start.y,p.x-start.x);
+const h=14;
+
+ctx.beginPath();
+ctx.moveTo(p.x,p.y);
+ctx.lineTo(p.x-h*Math.cos(a-Math.PI/6),p.y-h*Math.sin(a-Math.PI/6));
+ctx.lineTo(p.x-h*Math.cos(a+Math.PI/6),p.y-h*Math.sin(a+Math.PI/6));
+ctx.closePath();
+
+ctx.fillStyle=color;
+ctx.fill();
+
+if(perio==="P"){
+ctx.font="bold 14px Arial";
+ctx.fillStyle=color;
+ctx.fillText("P",start.x-12,start.y-12);
+}
+
+start=null;
+});
+
+function saveImg(){
+
+const temp=document.createElement("canvas");
+temp.width=canvas.width;
+temp.height=canvas.height;
+const t=temp.getContext("2d");
+
+t.drawImage(bg,0,0,canvas.width,canvas.height);
+t.drawImage(canvas,0,0);
+
+const id=document.getElementById("pid").value;
+
+if(id){
+t.font="bold 16px Arial";
+t.fillStyle="#000";
+t.fillText("ID: "+id,10,22);
+}
+
+const a=document.createElement("a");
+a.href=temp.toDataURL("image/png");
+a.download="calibracion_movil_"+(id||"paciente")+".png";
+a.click();
+}
+</script>
+
+</body>
+</html>
