@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mapa Calibración Móvil</title>
+
+<style>
+body{
+ margin:0;
+ font-family:Arial,sans-serif;
+ background:#f2f2f2;
+}
+
+#header{
+ padding:8px;
+ background:#fff;
+ border-bottom:1px solid #ddd;
+}
+
+#header input{
+ padding:6px;
+ font-size:16px;
+ width:140px;
+}
+
+#mapContainer{
+ position:relative;
+ width:100%;
+ max-width:700px;
+ margin:0 auto;
+ height:75vh;              /* MÁS GRANDE */
+}
+
+#bg{
+ width:100%;
+ height:100%;
+ object-fit:contain;        /* mantiene imagen completa */
+ display:block;
+}
+
+canvas{
+ position:absolute;
+ top:0;
+ left:0;
+ width:100%;
+ height:100%;
+}
+
+#toolbar{
+ position:fixed;
+ bottom:0;
+ left:0;
+ width:100%;
+ background:#fff;
+ border-top:2px solid #ccc;
+ padding:6px 4px;
+}
+
+.toolbar-row{
+ display:flex;
+ justify-content:space-around;
+ margin-bottom:4px;
+}
+
+button{
+ flex:1;
+ margin:2px;
+ padding:6px 0;
+ font-size:14px;
+ font-weight:bold;
+ border-radius:6px;
+ border:1px solid #555;
+}
+
+.color-btn{color:white;}
+
+.spacer{
+ height:120px;  /* menos espacio muerto */
+}
+</style>
+</head>
+
+<body>
+
+<div id="header">
+<strong>ID paciente:</strong>
+<input type="number" id="patientId" placeholder="Ej. 12345">
+</div>
+
+<div id="mapContainer">
+<img id="bg" src="mapa_bg.png">
+<canvas id="canvas"></canvas>
+</div>
+
+<div class="spacer"></div>
+
+<div id="toolbar">
+
+<div class="toolbar-row">
+<button class="color-btn" style="background:#009FE3" onclick="selectColor('#009FE3')">06</button>
+<button class="color-btn" style="background:#E30613" onclick="selectColor('#E30613')">07</button>
+<button class="color-btn" style="background:#E6007E" onclick="selectColor('#E6007E')">08</button>
+<button style="background:#FFD500;color:#000" onclick="selectColor('#FFD500')">09</button>
+<button class="color-btn" style="background:#7CB518" onclick="selectColor('#7CB518')">011</button>
+</div>
+
+<div class="toolbar-row">
+<button onclick="mode='drawX'">X</button>
+<button onclick="mode='erase'">🧽</button>
+<button onclick="undo()">↩</button>
+<button onclick="saveImage()">💾</button>
+</div>
+
+</div>
+
+<script>
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const bg = document.getElementById("bg");
+
+let history = [];
+let color = "#000";
+let mode = "arrow";
+
+bg.onload = function(){
+ canvas.width = bg.clientWidth;
+ canvas.height = bg.clientHeight;
+};
+
+function saveState(){
+ history.push(ctx.getImageData(0,0,canvas.width,canvas.height));
+}
+
+function undo(){
+ if(history.length>0){
+  ctx.putImageData(history.pop(),0,0);
+ }
+}
+
+function selectColor(c){
+ color=c;
+ mode="arrow";
+}
+
+canvas.addEventListener("pointerdown",function(e){
+
+ const rect = canvas.getBoundingClientRect();
+ const scaleX = canvas.width / rect.width;
+ const scaleY = canvas.height / rect.height;
+
+ const x = (e.clientX - rect.left) * scaleX;
+ const y = (e.clientY - rect.top) * scaleY;
+
+ if(mode==="arrow"){
+  saveState();
+  drawArrow(x,y);
+ }
+ else if(mode==="drawX"){
+  saveState();
+  drawX(x,y);
+ }
+ else if(mode==="erase"){
+  saveState();
+  eraseAt(x,y);
+ }
+
+});
+
+function drawArrow(x,y){
+
+ const centerX = canvas.width/2;
+ const centerY = canvas.height/2;
+
+ const angle = Math.atan2(y-centerY, x-centerX);
+
+ const len = 22;
+ const head = 7;
+
+ const ex = x + len*Math.cos(angle);
+ const ey = y + len*Math.sin(angle);
+
+ ctx.strokeStyle=color;
+ ctx.fillStyle=color;
+ ctx.lineWidth=3;
+
+ ctx.beginPath();
+ ctx.moveTo(x,y);
+ ctx.lineTo(ex,ey);
+ ctx.stroke();
+
+ ctx.beginPath();
+ ctx.moveTo(ex,ey);
+ ctx.lineTo(ex-head*Math.cos(angle-Math.PI/6), ey-head*Math.sin(angle-Math.PI/6));
+ ctx.lineTo(ex-head*Math.cos(angle+Math.PI/6), ey-head*Math.sin(angle+Math.PI/6));
+ ctx.closePath();
+ ctx.fill();
+}
+
+function drawX(x,y){
+ const size=6;
+ ctx.lineWidth=2;
+ ctx.strokeStyle="black";
+ ctx.beginPath();
+ ctx.moveTo(x-size,y-size);
+ ctx.lineTo(x+size,y+size);
+ ctx.moveTo(x+size,y-size);
+ ctx.lineTo(x-size,y+size);
+ ctx.stroke();
+}
+
+function eraseAt(x,y){
+ const radius=28;
+ ctx.save();
+ ctx.beginPath();
+ ctx.arc(x,y,radius,0,Math.PI*2);
+ ctx.clip();
+ ctx.clearRect(x-radius,y-radius,radius*2,radius*2);
+ ctx.restore();
+}
+
+function saveImage(){
+
+ const temp=document.createElement("canvas");
+ temp.width=canvas.width;
+ temp.height=canvas.height;
+ const t=temp.getContext("2d");
+
+ t.drawImage(bg,0,0,temp.width,temp.height);
+ t.drawImage(canvas,0,0);
+
+ const pid=document.getElementById("patientId").value;
+ if(pid){
+  t.font="bold 22px Arial";
+  t.fillStyle="#000";
+  t.fillText("ID: "+pid,15,30);
+ }
+
+ const finalImage=temp.toDataURL("image/png");
+ const a=document.createElement("a");
+ a.href=finalImage;
+ a.download="calibracion_"+(pid||"paciente")+".png";
+ document.body.appendChild(a);
+ a.click();
+ document.body.removeChild(a);
+}
+
+</script>
+
+</body>
+</html>
