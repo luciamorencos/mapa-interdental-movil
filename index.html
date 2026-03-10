@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Mapa Calibración - Móvil Clínico Preciso</title>
+<title>Mapa Calibración - Móvil Clínico</title>
 
 <style>
 html,body{margin:0;padding:0;height:100%;overflow:hidden;font-family:Arial,sans-serif;background:#f2f2f2;}
@@ -16,6 +16,7 @@ canvas{position:absolute;top:0;touch-action:none;}
 .row{display:flex;justify-content:space-between;margin-bottom:4px;}
 button{flex:1;margin:2px;padding:8px 0;font-size:12px;font-weight:bold;border-radius:6px;border:1px solid #555;cursor:pointer;}
 .color-btn{color:white;}
+.active-mode{border: 3px solid #000; box-shadow: 0 0 5px rgba(0,0,0,0.5);}
 </style>
 </head>
 
@@ -49,7 +50,7 @@ button{flex:1;margin:2px;padding:8px 0;font-size:12px;font-weight:bold;border-ra
     </div>
 
     <div class="row">
-        <button onclick="selectEraser()">🧽</button>
+        <button id="btnErase" onclick="selectEraser()">🧽</button>
         <button onclick="undo()">↩</button>
         <button onclick="saveImage()">💾</button>
         <button onclick="selectFree()">✏</button>
@@ -67,10 +68,11 @@ let history = [];
 let isPerio = false;
 let drawing = false;
 
-// Sincronización crucial con el nombre mapa_bg.png
+// Lista para almacenar objetos dibujados y permitir redibujado interactivo
+let elements = [];
+
 bg.onload = resizeCanvas;
 if (bg.complete) resizeCanvas();
-
 window.onresize = resizeCanvas;
 
 function resizeCanvas() {
@@ -78,108 +80,157 @@ function resizeCanvas() {
     canvas.height = bg.clientHeight;
     canvas.style.left = bg.offsetLeft + "px";
     canvas.style.top = bg.offsetTop + "px";
+    redrawAll();
 }
 
 function saveState() {
-    history.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+    history.push(JSON.stringify(elements));
+    if(history.length > 30) history.shift();
 }
 
 function undo() {
-    if(history.length > 0) ctx.putImageData(history.pop(), 0, 0);
+    if(history.length > 0) {
+        elements = JSON.parse(history.pop());
+        redrawAll();
+    }
+}
+
+function redrawAll() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    elements.forEach(el => {
+        if(el.type === "arrow") drawArrowFunc(el);
+        else if(el.type === "drawX") drawXFunc(el);
+        else if(el.type === "free") drawFreeFunc(el);
+    });
 }
 
 function selectColor(c, perio) {
     color = c;
     mode = "arrow";
     isPerio = perio;
+    resetButtonStyles();
 }
 
-function selectX() { mode = "drawX"; }
-function selectEraser() { mode = "erase"; }
-function selectFree() { mode = "free"; color = "#000"; }
+function selectX() { mode = "drawX"; resetButtonStyles(); }
+function selectEraser() { mode = "erase"; resetButtonStyles(); document.getElementById("btnErase").classList.add("active-mode"); }
+function selectFree() { mode = "free"; color = "#000"; resetButtonStyles(); }
+
+function resetButtonStyles() {
+    document.querySelectorAll("#toolbar button").forEach(b => b.classList.remove("active-mode"));
+}
 
 function getTouchPos(e) {
     const rect = canvas.getBoundingClientRect();
     const touch = e.touches[0];
-    return {
-        x: touch.clientX - rect.left,
-        y: touch.clientY - rect.top
-    };
+    return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
 }
 
 canvas.addEventListener("touchstart", function(e) {
     e.preventDefault();
     const pos = getTouchPos(e);
-    saveState();
-    if(mode === "arrow") drawArrow(pos.x, pos.y);
-    else if(mode === "drawX") drawX(pos.x, pos.y);
-    else if(mode === "erase") { drawing = true; erase(pos.x, pos.y); }
-    else if(mode === "free") { drawing = true; ctx.beginPath(); ctx.moveTo(pos.x, pos.y); }
+    
+    if (mode === "erase") {
+        saveState();
+        drawing = true;
+        doErase(pos.x, pos.y);
+    } else if (mode === "free") {
+        saveState();
+        drawing = true;
+        elements.push({ type: "free", points: [pos], color: color });
+    } else if (mode === "arrow" || mode === "drawX") {
+        // Detectar si pulsamos cerca de una flecha o X existente para cambiar color
+        const index = elements.findIndex(el => Math.hypot(el.x - pos.x, el.y - pos.y) < 15);
+        
+        saveState();
+        if (index !== -1 && elements[index].type === mode) {
+            // Actualizar existente
+            elements[index].color = color;
+            elements[index].isPerio = isPerio;
+        } else {
+            // Crear nueva
+            elements.push({ type: mode, x: pos.x, y: pos.y, color: color, isPerio: isPerio });
+        }
+        redrawAll();
+    }
 });
 
 canvas.addEventListener("touchmove", function(e) {
     const pos = getTouchPos(e);
-    if(mode === "erase" && drawing) erase(pos.x, pos.y);
-    if(mode === "free" && drawing) {
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = "#000";
-        ctx.lineTo(pos.x, pos.y);
-        ctx.stroke();
+    if(mode === "erase" && drawing) {
+        doErase(pos.x, pos.y);
+    } else if(mode === "free" && drawing) {
+        elements[elements.length - 1].points.push(pos);
+        redrawAll();
     }
 });
 
 canvas.addEventListener("touchend", function() { drawing = false; });
 
-function erase(x, y) { ctx.clearRect(x - 10, y - 10, 20, 20); }
+function doErase(x, y) {
+    const threshold = 15;
+    const prevLen = elements.length;
+    elements = elements.filter(el => {
+        if (el.type === "free") return true; // El borrado de trazo libre es complejo, lo mantenemos simple
+        return Math.hypot(el.x - x, el.y - y) > threshold;
+    });
+    // Para trazo libre y general, usamos clearRect visual
+    ctx.clearRect(x - 10, y - 10, 20, 20); 
+    if(elements.length !== prevLen) redrawAll();
+}
 
-function drawArrow(x, y) {
-    // Cálculo radial basado en el centro del mapa Curaprox
+function drawArrowFunc(el) {
     const midY = canvas.height * 0.46; 
     const midX = canvas.width / 2;
     const length = canvas.height * 0.045;
+    let angle = Math.atan2(el.y - midY, el.x - midX);
+    let direction = (el.y < midY) ? -1 : 1;
 
-    let angle = Math.atan2(y - midY, x - midX);
-    let direction = (y < midY) ? -1 : 1;
+    const endX = el.x + Math.cos(angle) * (length * direction);
+    const endY = el.y + Math.sin(angle) * (length * direction);
 
-    const endX = x + Math.cos(angle) * (length * direction);
-    const endY = y + Math.sin(angle) * (length * direction);
-
-    ctx.strokeStyle = color;
-    ctx.fillStyle = color;
-    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = el.color;
+    ctx.fillStyle = el.color;
+    ctx.lineWidth = 3;
 
     ctx.beginPath();
-    ctx.moveTo(x, y);
+    ctx.moveTo(el.x, el.y);
     ctx.lineTo(endX, endY);
     ctx.stroke();
 
-    const headSize = length * 0.35;
-    const arrowAngle = Math.atan2(endY - y, endX - x);
-
+    const headSize = length * 0.4;
+    const arrowAngle = Math.atan2(endY - el.y, endX - el.x);
     ctx.beginPath();
     ctx.moveTo(endX, endY);
-    ctx.lineTo(endX - headSize * Math.cos(arrowAngle - Math.PI / 6),
-               endY - headSize * Math.sin(arrowAngle - Math.PI / 6));
-    ctx.lineTo(endX - headSize * Math.cos(arrowAngle + Math.PI / 6),
-               endY - headSize * Math.sin(arrowAngle + Math.PI / 6));
+    ctx.lineTo(endX - headSize * Math.cos(arrowAngle - Math.PI / 6), endY - headSize * Math.sin(arrowAngle - Math.PI / 6));
+    ctx.lineTo(endX - headSize * Math.cos(arrowAngle + Math.PI / 6), endY - headSize * Math.sin(arrowAngle + Math.PI / 6));
     ctx.closePath();
     ctx.fill();
 
-    if(isPerio) {
-        ctx.font = "bold 12px Arial";
-        ctx.fillText("P", x + 4, y - 4);
+    if(el.isPerio) {
+        ctx.font = "bold 13px Arial";
+        ctx.fillText("P", el.x + 5, el.y - 5);
     }
 }
 
-function drawX(x, y) {
-    const size = 7;
+function drawXFunc(el) {
+    const size = 8;
     ctx.strokeStyle = "black";
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(x - size, y - size);
-    ctx.lineTo(x + size, y + size);
-    ctx.moveTo(x + size, y - size);
-    ctx.lineTo(x - size, y + size);
+    ctx.moveTo(el.x - size, el.y - size); ctx.lineTo(el.x + size, el.y + size);
+    ctx.moveTo(el.x + size, el.y - size); ctx.lineTo(el.x - size, el.y + size);
+    ctx.stroke();
+}
+
+function drawFreeFunc(el) {
+    if (el.points.length < 2) return;
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = el.color;
+    ctx.beginPath();
+    ctx.moveTo(el.points[0].x, el.points[0].y);
+    for(let i=1; i<el.points.length; i++) {
+        ctx.lineTo(el.points[i].x, el.points[i].y);
+    }
     ctx.stroke();
 }
 
@@ -188,19 +239,11 @@ function saveImage() {
     temp.width = canvas.width;
     temp.height = canvas.height;
     const t = temp.getContext("2d");
-    
     t.fillStyle = "#fff";
     t.fillRect(0,0,temp.width,temp.height);
     t.drawImage(bg, 0, 0, temp.width, temp.height);
     t.drawImage(canvas, 0, 0);
-    
     const pid = document.getElementById("patientId").value;
-    if(pid) {
-        t.font = "bold 20px Arial";
-        t.fillStyle = "#000";
-        t.fillText("ID: " + pid, 20, 40);
-    }
-    
     const link = document.createElement("a");
     link.href = temp.toDataURL("image/png");
     link.download = "calibracion_" + (pid || "curaprox") + ".png";
