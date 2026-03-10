@@ -10,8 +10,8 @@ html,body{margin:0;padding:0;height:100%;overflow:hidden;font-family:Arial,sans-
 #header{padding:4px 6px;background:#fff;border-bottom:1px solid #ddd;font-size:14px;height:30px;display:flex;align-items:center;}
 #patientId{width:60px;margin-left:5px;}
 #mapWrapper{position:absolute;top:40px;bottom:90px;left:0;right:0;display:flex;justify-content:center;align-items:center;overflow:hidden;}
-#bg{height:100%;width:auto;display:block;}
-canvas{position:absolute;top:0;}
+#bg{height:100%;width:auto;display:block;user-select:none;-webkit-user-drag:none;}
+canvas{position:absolute;top:0;touch-action:none;}
 #toolbar{position:absolute;bottom:0;left:0;width:100%;background:#fff;border-top:2px solid #ccc;padding:4px;box-sizing:border-box;}
 .row{display:flex;justify-content:space-between;margin-bottom:4px;}
 button{flex:1;margin:2px;padding:8px 0;font-size:12px;font-weight:bold;border-radius:6px;border:1px solid #555;cursor:pointer;}
@@ -27,7 +27,7 @@ button{flex:1;margin:2px;padding:8px 0;font-size:12px;font-weight:bold;border-ra
 </div>
 
 <div id="mapWrapper">
-    <img id="bg" src="mapa_bg.jpg">
+    <img id="bg" src="mapa_bg.png">
     <canvas id="canvas"></canvas>
 </div>
 
@@ -67,19 +67,21 @@ let history = [];
 let isPerio = false;
 let drawing = false;
 
-// Ajuste inicial y al redimensionar
-window.onload = resizeCanvas;
+// Sincronización crucial con el nombre mapa_bg.png
+bg.onload = resizeCanvas;
+if (bg.complete) resizeCanvas();
+
 window.onresize = resizeCanvas;
 
 function resizeCanvas() {
     canvas.width = bg.clientWidth;
     canvas.height = bg.clientHeight;
-    // Repintar si hubiera datos (opcional)
+    canvas.style.left = bg.offsetLeft + "px";
+    canvas.style.top = bg.offsetTop + "px";
 }
 
 function saveState() {
     history.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
-    if(history.length > 15) history.shift(); // Limitar historial
 }
 
 function undo() {
@@ -131,19 +133,14 @@ canvas.addEventListener("touchend", function() { drawing = false; });
 function erase(x, y) { ctx.clearRect(x - 10, y - 10, 20, 20); }
 
 function drawArrow(x, y) {
-    // El centro del dibujo para calcular el ángulo radial
+    // Cálculo radial basado en el centro del mapa Curaprox
     const midY = canvas.height * 0.46; 
     const midX = canvas.width / 2;
-    const length = canvas.height * 0.045; // Tamaño de la flecha
+    const length = canvas.height * 0.045;
 
-    // Ángulo desde el centro hacia el punto tocado
     let angle = Math.atan2(y - midY, x - midX);
-
-    // Si tocamos arriba de la línea media, la flecha debe apuntar hacia afuera (arriba)
-    // Si tocamos abajo, debe apuntar hacia afuera (abajo)
     let direction = (y < midY) ? -1 : 1;
 
-    // La punta de la flecha (end) se proyecta desde el origen (x,y)
     const endX = x + Math.cos(angle) * (length * direction);
     const endY = y + Math.sin(angle) * (length * direction);
 
@@ -151,13 +148,11 @@ function drawArrow(x, y) {
     ctx.fillStyle = color;
     ctx.lineWidth = 2.5;
 
-    // Dibujar línea principal
     ctx.beginPath();
     ctx.moveTo(x, y);
     ctx.lineTo(endX, endY);
     ctx.stroke();
 
-    // Dibujar punta de flecha
     const headSize = length * 0.35;
     const arrowAngle = Math.atan2(endY - y, endX - x);
 
@@ -194,7 +189,6 @@ function saveImage() {
     temp.height = canvas.height;
     const t = temp.getContext("2d");
     
-    // Fondo blanco e imagen de base
     t.fillStyle = "#fff";
     t.fillRect(0,0,temp.width,temp.height);
     t.drawImage(bg, 0, 0, temp.width, temp.height);
@@ -204,7 +198,7 @@ function saveImage() {
     if(pid) {
         t.font = "bold 20px Arial";
         t.fillStyle = "#000";
-        t.fillText("ID Paciente: " + pid, 20, 40);
+        t.fillText("ID: " + pid, 20, 40);
     }
     
     const link = document.createElement("a");
