@@ -69,33 +69,43 @@ let history=[];
 let isPerio=false;
 let drawing=false;
 
-/* espacios interdentales definidos sobre la imagen */
+/* POSICIONES ESPACIOS INTERDENTALES */
 
 const spaces=[
 
-{x:0.18,y:0.36,dx:-0.6,dy:0.8},
-{x:0.24,y:0.31,dx:-0.6,dy:0.8},
-{x:0.30,y:0.27,dx:-0.5,dy:0.9},
-{x:0.36,y:0.24,dx:-0.4,dy:1},
-{x:0.43,y:0.22,dx:-0.2,dy:1},
-{x:0.50,y:0.21,dx:0,dy:1},
-{x:0.57,y:0.22,dx:0.2,dy:1},
-{x:0.64,y:0.24,dx:0.4,dy:1},
-{x:0.70,y:0.27,dx:0.5,dy:0.9},
-{x:0.76,y:0.31,dx:0.6,dy:0.8},
-{x:0.82,y:0.36,dx:0.6,dy:0.8},
+/* CUADRANTE 2 */
 
-{x:0.82,y:0.63,dx:0.6,dy:-0.8},
-{x:0.76,y:0.68,dx:0.6,dy:-0.8},
-{x:0.70,y:0.72,dx:0.5,dy:-0.9},
-{x:0.64,y:0.75,dx:0.4,dy:-1},
-{x:0.57,y:0.77,dx:0.2,dy:-1},
+{x:0.18,y:0.36,dx:0.6,dy:0.8},
+{x:0.24,y:0.31,dx:0.6,dy:0.8},
+{x:0.30,y:0.27,dx:0.5,dy:0.9},
+{x:0.36,y:0.24,dx:0.4,dy:1},
+{x:0.43,y:0.22,dx:0.2,dy:1},
+{x:0.50,y:0.21,dx:0,dy:1},
+
+/* CUADRANTE 1 */
+
+{x:0.57,y:0.22,dx:-0.2,dy:1},
+{x:0.64,y:0.24,dx:-0.4,dy:1},
+{x:0.70,y:0.27,dx:-0.5,dy:0.9},
+{x:0.76,y:0.31,dx:-0.6,dy:0.8},
+{x:0.82,y:0.36,dx:-0.6,dy:0.8},
+
+/* CUADRANTE 4 */
+
+{x:0.82,y:0.63,dx:-0.6,dy:-0.8},
+{x:0.76,y:0.68,dx:-0.6,dy:-0.8},
+{x:0.70,y:0.72,dx:-0.5,dy:-0.9},
+{x:0.64,y:0.75,dx:-0.4,dy:-1},
+{x:0.57,y:0.77,dx:-0.2,dy:-1},
 {x:0.50,y:0.78,dx:0,dy:-1},
-{x:0.43,y:0.77,dx:-0.2,dy:-1},
-{x:0.36,y:0.75,dx:-0.4,dy:-1},
-{x:0.30,y:0.72,dx:-0.5,dy:-0.9},
-{x:0.24,y:0.68,dx:-0.6,dy:-0.8},
-{x:0.18,y:0.63,dx:-0.6,dy:-0.8}
+
+/* CUADRANTE 3 */
+
+{x:0.43,y:0.77,dx:0.2,dy:-1},
+{x:0.36,y:0.75,dx:0.4,dy:-1},
+{x:0.30,y:0.72,dx:0.5,dy:-0.9},
+{x:0.24,y:0.68,dx:0.6,dy:-0.8},
+{x:0.18,y:0.63,dx:0.6,dy:-0.8}
 
 ];
 
@@ -216,6 +226,7 @@ function saveImage(){
 const temp=document.createElement("canvas");
 temp.width=canvas.width;
 temp.height=canvas.height;
+
 const t=temp.getContext("2d");
 
 t.drawImage(bg,0,0,temp.width,temp.height);
