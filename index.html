@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Mapa Calibración - Vectores Corregidos</title>
+<title>Mapa Calibración</title>
 
 <style>
 html,body{margin:0;padding:0;height:100%;overflow:hidden;font-family:Arial,sans-serif;background:#f2f2f2;}
@@ -32,6 +32,7 @@ button{flex:1;margin:2px;padding:8px 0;font-size:11px;font-weight:bold;border-ra
 </div>
 
 <div id="toolbar">
+
 <div class="row">
 <button id="btn06" class="color-btn active-tool" style="background:#009FE3" onclick="selectTool('#009FE3',false,'btn06')">06</button>
 <button id="btn07" class="color-btn" style="background:#E30613" onclick="selectTool('#E30613',false,'btn07')">07</button>
@@ -54,60 +55,78 @@ button{flex:1;margin:2px;padding:8px 0;font-size:11px;font-weight:bold;border-ra
 <button onclick="undo()">↩️</button>
 <button onclick="saveImage()" style="background:#28a745;color:white;">💾 Guardar</button>
 </div>
+
 </div>
 
 <script>
 
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
-const bg = document.getElementById("bg");
+const canvas=document.getElementById("canvas");
+const ctx=canvas.getContext("2d");
+const bg=document.getElementById("bg");
 
-let config = { color:"#009FE3", isPerio:false, mode:"arrow" };
-let elements = [];
-let history = [];
-let drawing = false;
+let config={color:"#009FE3",isPerio:false,mode:"arrow"};
+let elements=[];
+let history=[];
+let drawing=false;
 
-bg.onload = resizeCanvas;
-if (bg.complete) resizeCanvas();
-window.onresize = resizeCanvas;
+bg.onload=resizeCanvas;
+if(bg.complete)resizeCanvas();
+window.onresize=resizeCanvas;
 
 function resizeCanvas(){
-canvas.width = bg.clientWidth;
-canvas.height = bg.clientHeight;
-canvas.style.left = bg.offsetLeft + "px";
-canvas.style.top = bg.offsetTop + "px";
+
+canvas.width=bg.clientWidth;
+canvas.height=bg.clientHeight;
+
+canvas.style.left=bg.offsetLeft+"px";
+canvas.style.top=bg.offsetTop+"px";
+
 redrawAll();
+
 }
 
 function selectTool(c,p,id){
+
 config.color=c;
 config.isPerio=p;
 config.mode="arrow";
+
 highlight(id);
+
 }
 
 function selectMode(m,id){
+
 config.mode=m;
 highlight(id);
+
 }
 
 function highlight(id){
+
 document.querySelectorAll("#toolbar button").forEach(b=>b.classList.remove("active-tool"));
 document.getElementById(id).classList.add("active-tool");
+
 }
 
 function getPos(e){
+
 const r=canvas.getBoundingClientRect();
+
 return{
+
 x:e.touches[0].clientX-r.left,
 y:e.touches[0].clientY-r.top
+
 };
+
 }
 
 canvas.addEventListener("touchstart",function(e){
 
 e.preventDefault();
 const pos=getPos(e);
+
 saveState();
 
 if(config.mode==="free"){
@@ -115,12 +134,16 @@ if(config.mode==="free"){
 drawing=true;
 elements.push({type:"free",color:"#000",points:[pos]});
 
-}else if(config.mode==="erase"){
+}
+
+else if(config.mode==="erase"){
 
 drawing=true;
 doErase(pos.x,pos.y);
 
-}else{
+}
+
+else{
 
 const idx=elements.findIndex(el=>el.type!=="free" && Math.hypot(el.x-pos.x,el.y-pos.y)<20);
 
@@ -130,14 +153,18 @@ elements[idx].color=config.color;
 elements[idx].isPerio=config.isPerio;
 elements[idx].type=config.mode;
 
-}else{
+}
+
+else{
 
 elements.push({
+
 type:config.mode,
 x:pos.x,
 y:pos.y,
 color:config.color,
 isPerio:config.isPerio
+
 });
 
 }
@@ -152,14 +179,16 @@ canvas.addEventListener("touchmove",function(e){
 
 const pos=getPos(e);
 
-if(!drawing) return;
+if(!drawing)return;
 
 if(config.mode==="free"){
 
 elements[elements.length-1].points.push(pos);
 redrawAll();
 
-}else if(config.mode==="erase"){
+}
+
+else if(config.mode==="erase"){
 
 doErase(pos.x,pos.y);
 redrawAll();
@@ -193,9 +222,9 @@ ctx.clearRect(0,0,canvas.width,canvas.height);
 
 elements.forEach(el=>{
 
-if(el.type==="arrow") drawArrowFunc(el);
-else if(el.type==="drawX") drawXFunc(el);
-else if(el.type==="free") drawFreeFunc(el);
+if(el.type==="arrow")drawArrowFunc(el);
+else if(el.type==="drawX")drawXFunc(el);
+else if(el.type==="free")drawFreeFunc(el);
 
 });
 
@@ -207,7 +236,9 @@ const midY=canvas.height*0.46;
 const midX=canvas.width/2;
 const length=canvas.height*0.05;
 
-let angle=Math.atan2(midY-el.y,midX-el.x);
+/* VECTOR CORRECTO (flechas hacia el diente) */
+
+let angle=Math.atan2(el.y-midY,el.x-midX);
 
 const ex=el.x+Math.cos(angle)*length;
 const ey=el.y+Math.sin(angle)*length;
@@ -232,8 +263,10 @@ ctx.closePath();
 ctx.fill();
 
 if(el.isPerio){
+
 ctx.font="bold 13px Arial";
 ctx.fillText("P",el.x+5,el.y-5);
+
 }
 
 }
@@ -241,6 +274,7 @@ ctx.fillText("P",el.x+5,el.y-5);
 function drawXFunc(el){
 
 const s=8;
+
 ctx.strokeStyle="black";
 ctx.lineWidth=3;
 
@@ -255,7 +289,7 @@ ctx.stroke();
 
 function drawFreeFunc(el){
 
-if(el.points.length<2) return;
+if(el.points.length<2)return;
 
 ctx.strokeStyle=el.color;
 ctx.lineWidth=2;
@@ -263,9 +297,7 @@ ctx.lineWidth=2;
 ctx.beginPath();
 ctx.moveTo(el.points[0].x,el.points[0].y);
 
-el.points.forEach(p=>{
-ctx.lineTo(p.x,p.y);
-});
+el.points.forEach(p=>ctx.lineTo(p.x,p.y));
 
 ctx.stroke();
 
@@ -275,8 +307,7 @@ function saveState(){
 
 history.push(JSON.stringify(elements));
 
-if(history.length>20)
-history.shift();
+if(history.length>20)history.shift();
 
 }
 
@@ -310,6 +341,7 @@ const a=document.createElement("a");
 
 a.href=t.toDataURL("image/png");
 a.download="calibracion.png";
+
 a.click();
 
 }
