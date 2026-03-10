@@ -3,28 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Mapa Calibración - Sistema de Reclasificación</title>
+<title>Mapa Calibración - Versión Final Corregida</title>
 
 <style>
 html,body{margin:0;padding:0;height:100%;overflow:hidden;font-family:Arial,sans-serif;background:#f2f2f2;}
 #header{padding:4px 6px;background:#fff;border-bottom:1px solid #ddd;font-size:14px;height:30px;display:flex;align-items:center;}
 #patientId{width:60px;margin-left:5px;}
-#mapWrapper{position:absolute;top:40px;bottom:100px;left:0;right:0;display:flex;justify-content:center;align-items:center;overflow:hidden;}
+#mapWrapper{position:absolute;top:40px;bottom:130px;left:0;right:0;display:flex;justify-content:center;align-items:center;overflow:hidden;}
 #bg{height:100%;width:auto;display:block;user-select:none;-webkit-user-drag:none;}
 canvas{position:absolute;top:0;touch-action:none;}
 #toolbar{position:absolute;bottom:0;left:0;width:100%;background:#fff;border-top:2px solid #ccc;padding:4px;box-sizing:border-box;}
 .row{display:flex;justify-content:space-between;margin-bottom:4px;}
-button{flex:1;margin:2px;padding:8px 0;font-size:12px;font-weight:bold;border-radius:6px;border:1px solid #555;cursor:pointer;}
+button{flex:1;margin:2px;padding:8px 0;font-size:11px;font-weight:bold;border-radius:6px;border:1px solid #555;cursor:pointer;}
 .color-btn{color:white;}
-.active-tool{outline: 3px solid black; outline-offset: -3px; box-shadow: 0 0 8px rgba(0,0,0,0.4);}
+.active-tool{outline: 3px solid black; outline-offset: -2px; box-shadow: 0 0 5px rgba(0,0,0,0.5);}
 </style>
 </head>
 
 <body>
 
 <div id="header">
-    <strong>ID Paciente:</strong>
-    <input type="number" id="patientId" placeholder="0000">
+    <strong>ID:</strong> <input type="number" id="patientId" placeholder="0000">
 </div>
 
 <div id="mapWrapper">
@@ -34,25 +33,24 @@ button{flex:1;margin:2px;padding:8px 0;font-size:12px;font-weight:bold;border-ra
 
 <div id="toolbar">
     <div class="row">
-        <button id="btn06" class="color-btn active-tool" style="background:#009FE3" onclick="selectTool('#009FE3',false, 'btn06')">06</button>
-        <button id="btn07" class="color-btn" style="background:#E30613" onclick="selectTool('#E30613',false, 'btn07')">07</button>
-        <button id="btn08" class="color-btn" style="background:#E6007E" onclick="selectTool('#E6007E',false, 'btn08')">08</button>
-        <button id="btn09" style="background:#FFD500" onclick="selectTool('#FFD500',false, 'btn09')">09</button>
-        <button id="btn011" class="color-btn" style="background:#7CB518" onclick="selectTool('#7CB518',false, 'btn011')">011</button>
+        <button id="btn06" class="color-btn active-tool" style="background:#009FE3" onclick="selectTool('#009FE3',false,'btn06')">06</button>
+        <button id="btn07" class="color-btn" style="background:#E30613" onclick="selectTool('#E30613',false,'btn07')">07</button>
+        <button id="btn08" class="color-btn" style="background:#E6007E" onclick="selectTool('#E6007E',false,'btn08')">08</button>
+        <button id="btn09" style="background:#FFD500" onclick="selectTool('#FFD500',false,'btn09')">09</button>
+        <button id="btn011" class="color-btn" style="background:#7CB518" onclick="selectTool('#7CB518',false,'btn011')">011</button>
     </div>
-
     <div class="row">
-        <button id="btn405" class="color-btn" style="background:#E30613" onclick="selectTool('#E30613',true, 'btn405')">405</button>
-        <button id="btn406" class="color-btn" style="background:#E83E8C" onclick="selectTool('#E83E8C',true, 'btn406')">406</button>
-        <button id="btn408" class="color-btn" style="background:#6F42C1" onclick="selectTool('#6F42C1',true, 'btn408')">408</button>
-        <button id="btn410" class="color-btn" style="background:#0B3C5D" onclick="selectTool('#0B3C5D',true, 'btn410')">410</button>
-        <button id="btnX" onclick="selectX('btnX')">X</button>
+        <button id="btn405" class="color-btn" style="background:#E30613" onclick="selectTool('#E30613',true,'btn405')">405</button>
+        <button id="btn406" class="color-btn" style="background:#E83E8C" onclick="selectTool('#E83E8C',true,'btn406')">406</button>
+        <button id="btn408" class="color-btn" style="background:#6F42C1" onclick="selectTool('#6F42C1',true,'btn408')">408</button>
+        <button id="btn410" class="color-btn" style="background:#0B3C5D" onclick="selectTool('#0B3C5D',true,'btn410')">410</button>
+        <button id="btnX" onclick="selectMode('drawX','btnX')">X</button>
     </div>
-
     <div class="row">
-        <button id="btnErase" onclick="selectEraser('btnErase')">🧽</button>
-        <button onclick="undo()">↩ Deshacer</button>
-        <button onclick="saveImage()" style="background:#28a745; color:white; border:none;">💾 Guardar</button>
+        <button id="btnFree" onclick="selectMode('free','btnFree')">✏️ Libre</button>
+        <button id="btnErase" onclick="selectMode('erase','btnErase')">🧽 Goma</button>
+        <button onclick="undo()">↩️</button>
+        <button onclick="saveImage()" style="background:#28a745; color:white;">💾 Guardar</button>
     </div>
 </div>
 
@@ -61,17 +59,11 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const bg = document.getElementById("bg");
 
-// VARIABLES GLOBALES DE ESTADO (La "Herramienta Activa")
-let currentConfig = {
-    color: "#009FE3",
-    isPerio: false,
-    mode: "arrow" // arrow, drawX, erase
-};
-
-let elements = []; // Nuestra "Base de Datos" de objetos interactivos
+let config = { color: "#009FE3", isPerio: false, mode: "arrow" };
+let elements = []; 
 let history = [];
+let drawing = false;
 
-// INICIALIZACIÓN
 bg.onload = resizeCanvas;
 if (bg.complete) resizeCanvas();
 window.onresize = resizeCanvas;
@@ -84,73 +76,81 @@ function resizeCanvas() {
     redrawAll();
 }
 
-// SELECCIÓN DE HERRAMIENTAS
-function selectTool(color, perio, btnId) {
-    currentConfig.color = color;
-    currentConfig.isPerio = perio;
-    currentConfig.mode = "arrow";
-    highlightBtn(btnId);
+function selectTool(c, p, id) {
+    config.color = c; config.isPerio = p; config.mode = "arrow";
+    highlight(id);
 }
 
-function selectX(btnId) {
-    currentConfig.mode = "drawX";
-    highlightBtn(btnId);
+function selectMode(m, id) {
+    config.mode = m;
+    highlight(id);
 }
 
-function selectEraser(btnId) {
-    currentConfig.mode = "erase";
-    highlightBtn(btnId);
-}
-
-function highlightBtn(id) {
+function highlight(id) {
     document.querySelectorAll("#toolbar button").forEach(b => b.classList.remove("active-tool"));
     document.getElementById(id).classList.add("active-tool");
 }
 
-// GESTIÓN DE EVENTOS TÁCTILES
 canvas.addEventListener("touchstart", function(e) {
     e.preventDefault();
-    const rect = canvas.getBoundingClientRect();
-    const pos = {
-        x: e.touches[0].clientX - rect.left,
-        y: e.touches[0].clientY - rect.top
-    };
+    const pos = getPos(e);
+    saveState();
 
-    saveHistory();
-
-    if (currentConfig.mode === "erase") {
-        // Borrar: Filtramos los elementos que estén lejos del toque
-        elements = elements.filter(el => Math.hypot(el.x - pos.x, el.y - pos.y) > 20);
-    } 
-    else {
-        // BUSCAR SI YA EXISTE UN OBJETO EN ESA POSICIÓN (Detección de colisión)
-        const existingIndex = elements.findIndex(el => Math.hypot(el.x - pos.x, el.y - pos.y) < 20);
-
-        if (existingIndex !== -1) {
-            // RECLASIFICACIÓN: Si existe, actualizamos sus propiedades con la herramienta activa
-            elements[existingIndex].type = currentConfig.mode;
-            elements[existingIndex].color = currentConfig.color;
-            elements[existingIndex].isPerio = currentConfig.isPerio;
+    if (config.mode === "free") {
+        drawing = true;
+        elements.push({ type: "free", color: "#000", points: [pos] });
+    } else if (config.mode === "erase") {
+        drawing = true;
+        doErase(pos.x, pos.y);
+    } else {
+        // Lógica de Reclasificación o Creación
+        const idx = elements.findIndex(el => el.type !== "free" && Math.hypot(el.x - pos.x, el.y - pos.y) < 20);
+        if (idx !== -1) {
+            elements[idx].color = config.color;
+            elements[idx].isPerio = config.isPerio;
+            elements[idx].type = config.mode;
         } else {
-            // CREACIÓN: Si no hay nada cerca, añadimos un nuevo objeto
-            elements.push({
-                type: currentConfig.mode,
-                x: pos.x,
-                y: pos.y,
-                color: currentConfig.color,
-                isPerio: currentConfig.isPerio
-            });
+            elements.push({ type: config.mode, x: pos.x, y: pos.y, color: config.color, isPerio: config.isPerio });
         }
     }
     redrawAll();
 });
 
-// MOTOR DE RENDERIZADO (Dibuja la base de datos de objetos)
+canvas.addEventListener("touchmove", function(e) {
+    const pos = getPos(e);
+    if (!drawing) return;
+    if (config.mode === "free") {
+        elements[elements.length - 1].points.push(pos);
+        redrawAll();
+    } else if (config.mode === "erase") {
+        doErase(pos.x, pos.y);
+        redrawAll();
+    }
+});
+
+canvas.addEventListener("touchend", () => drawing = false);
+
+function getPos(e) {
+    const r = canvas.getBoundingClientRect();
+    return { x: e.touches[0].clientX - r.left, y: e.touches[0].clientY - r.top };
+}
+
+function doErase(x, y) {
+    elements = elements.filter(el => {
+        if (el.type === "free") {
+            el.points = el.points.filter(p => Math.hypot(p.x - x, p.y - y) > 10);
+            return el.points.length > 1;
+        }
+        return Math.hypot(el.x - x, el.y - y) > 15;
+    });
+}
+
 function redrawAll() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     elements.forEach(el => {
         if (el.type === "arrow") drawArrow(el);
         else if (el.type === "drawX") drawX(el);
+        else if (el.type === "free") drawFree(el);
     });
 }
 
@@ -159,35 +159,30 @@ function drawArrow(el) {
     const midX = canvas.width / 2;
     const length = canvas.height * 0.045;
     
-    // Ángulo radial desde el centro
+    // Ángulo desde el centro
     let angle = Math.atan2(el.y - midY, el.x - midX);
-    // Orientación: Superior (arriba), Inferior (abajo)
+    
+    // CORRECCIÓN DEFINITIVA INFERIOR:
+    // En el mapa Curaprox, los dientes inferiores están "mirando" al centro.
+    // La flecha debe nacer en el toque y apuntar HACIA el diente.
+    // Superior: Tocar abajo del diente -> flecha sube (-1)
+    // Inferior: Tocar arriba del diente -> flecha baja (1)
     let direction = (el.y < midY) ? -1 : 1;
 
-    const endX = el.x + Math.cos(angle) * (length * direction);
-    const endY = el.y + Math.sin(angle) * (length * direction);
+    const ex = el.x + Math.cos(angle) * (length * direction);
+    const ey = el.y + Math.sin(angle) * (length * direction);
 
-    ctx.strokeStyle = el.color;
-    ctx.fillStyle = el.color;
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = el.color; ctx.fillStyle = el.color; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(el.x, el.y); ctx.lineTo(ex, ey); ctx.stroke();
 
-    // Línea
+    const head = length * 0.4;
+    const a = Math.atan2(ey - el.y, ex - el.x);
     ctx.beginPath();
-    ctx.moveTo(el.x, el.y);
-    ctx.lineTo(endX, endY);
-    ctx.stroke();
+    ctx.moveTo(ex, ey);
+    ctx.lineTo(ex - head * Math.cos(a - 0.5), ey - head * Math.sin(a - 0.5));
+    ctx.lineTo(ex - head * Math.cos(a + 0.5), ey - head * Math.sin(a + 0.5));
+    ctx.closePath(); ctx.fill();
 
-    // Punta
-    const headSize = length * 0.4;
-    const arrowAngle = Math.atan2(endY - el.y, endX - el.x);
-    ctx.beginPath();
-    ctx.moveTo(endX, endY);
-    ctx.lineTo(endX - headSize * Math.cos(arrowAngle - Math.PI / 6), endY - headSize * Math.sin(arrowAngle - Math.PI / 6));
-    ctx.lineTo(endX - headSize * Math.cos(arrowAngle + Math.PI / 6), endY - headSize * Math.sin(arrowAngle + Math.PI / 6));
-    ctx.closePath();
-    ctx.fill();
-
-    // Etiqueta PERIO
     if (el.isPerio) {
         ctx.font = "bold 13px Arial";
         ctx.fillText("P", el.x + 5, el.y - 5);
@@ -195,40 +190,37 @@ function drawArrow(el) {
 }
 
 function drawX(el) {
-    const s = 8;
-    ctx.strokeStyle = "black";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(el.x - s, el.y - s); ctx.lineTo(el.x + s, el.y + s);
-    ctx.moveTo(el.x + s, el.y - s); ctx.lineTo(el.x - s, el.y + s);
+    const s = 7; ctx.strokeStyle = "black"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(el.x-s, el.y-s); ctx.lineTo(el.x+s, el.y+s);
+    ctx.moveTo(el.x+s, el.y-s); ctx.lineTo(el.x-s, el.y+s); ctx.stroke();
+}
+
+function drawFree(el) {
+    ctx.strokeStyle = el.color; ctx.lineWidth = 2; ctx.beginPath();
+    ctx.moveTo(el.points[0].x, el.points[0].y);
+    el.points.forEach(p => ctx.lineTo(p.x, p.y));
     ctx.stroke();
 }
 
-function undo() {
-    if (history.length > 0) {
-        elements = JSON.parse(history.pop());
-        redrawAll();
-    }
+function saveState() {
+    history.push(JSON.stringify(elements));
+    if (history.length > 20) history.shift();
 }
 
-function saveHistory() {
-    history.push(JSON.stringify(elements));
-    if (history.length > 30) history.shift();
+function undo() {
+    if (history.length > 0) { elements = JSON.parse(history.pop()); redrawAll(); }
 }
 
 function saveImage() {
-    const temp = document.createElement("canvas");
-    temp.width = canvas.width; temp.height = canvas.height;
-    const tctx = temp.getContext("2d");
-    tctx.fillStyle = "white";
-    tctx.fillRect(0,0,temp.width,temp.height);
-    tctx.drawImage(bg, 0, 0, temp.width, temp.height);
-    tctx.drawImage(canvas, 0, 0);
-    
-    const link = document.createElement("a");
-    link.href = temp.toDataURL("image/png");
-    link.download = `clinica_id_${document.getElementById('patientId').value || '000'}.png`;
-    link.click();
+    const t = document.createElement("canvas");
+    t.width = canvas.width; t.height = canvas.height;
+    const tc = t.getContext("2d");
+    tc.fillStyle = "white"; tc.fillRect(0,0,t.width,t.height);
+    tc.drawImage(bg, 0, 0, t.width, t.height);
+    tc.drawImage(canvas, 0, 0);
+    const a = document.createElement("a");
+    a.href = t.toDataURL("image/png");
+    a.download = "calibracion.png"; a.click();
 }
 </script>
 </body>
