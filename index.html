@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Mapa Calibración - Vectores Corregidos</title>
+<title>Mapa Calibración - Corrección Final Direcciones</title>
 
 <style>
 html,body{margin:0;padding:0;height:100%;overflow:hidden;font-family:Arial,sans-serif;background:#f2f2f2;}
@@ -158,17 +158,16 @@ function drawArrowFunc(el) {
     const midX = canvas.width / 2;
     const length = canvas.height * 0.05;
     
-    // Ángulo radial
+    // Ángulo radial (hacia dónde mira el punto respecto al centro)
     let angle = Math.atan2(el.y - midY, el.x - midX);
     
-    // LÓGICA DE ESPEJO:
-    // Superior (el.y < midY): Queremos que suba -> Dirección negativa respecto al centro (-1)
-    // Inferior (el.y > midY): Queremos que baje -> Dirección positiva respecto al centro (1)
-    // En el dibujo Curaprox, "afuera" de la elipse siempre es hacia el diente.
-    let direction = (el.y < midY) ? -1 : 1;
+    // LÓGICA DE DIRECCIÓN SIMPLIFICADA Y CORREGIDA:
+    // El punto de origen es el.x, el.y
+    // Queremos que el final de la flecha (ex, ey) esté más lejos del centro que el origen.
+    let direction = 1; 
 
-    const ex = el.x + Math.cos(angle) * (length * direction);
-    const ey = el.y + Math.sin(angle) * (length * direction);
+    const ex = el.x + Math.cos(angle) * length;
+    const ey = el.y + Math.sin(angle) * length;
 
     ctx.strokeStyle = el.color; ctx.fillStyle = el.color; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(el.x, el.y); ctx.lineTo(ex, ey); ctx.stroke();
@@ -210,4 +209,11 @@ function saveImage() {
     const tc = t.getContext("2d");
     tc.fillStyle = "white"; tc.fillRect(0,0,t.width,t.height);
     tc.drawImage(bg, 0, 0, t.width, t.height);
-    tc
+    tc.drawImage(canvas, 0, 0);
+    const a = document.createElement("a");
+    a.href = t.toDataURL("image/png");
+    a.download = "calibracion.png"; a.click();
+}
+</script>
+</body>
+</html>
