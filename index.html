@@ -3,28 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Mapa Calibración - Corrección Inferior</title>
+<title>Mapa Calibración - Sistema de Reclasificación</title>
 
 <style>
 html,body{margin:0;padding:0;height:100%;overflow:hidden;font-family:Arial,sans-serif;background:#f2f2f2;}
 #header{padding:4px 6px;background:#fff;border-bottom:1px solid #ddd;font-size:14px;height:30px;display:flex;align-items:center;}
 #patientId{width:60px;margin-left:5px;}
-#mapWrapper{position:absolute;top:40px;bottom:90px;left:0;right:0;display:flex;justify-content:center;align-items:center;overflow:hidden;}
+#mapWrapper{position:absolute;top:40px;bottom:100px;left:0;right:0;display:flex;justify-content:center;align-items:center;overflow:hidden;}
 #bg{height:100%;width:auto;display:block;user-select:none;-webkit-user-drag:none;}
 canvas{position:absolute;top:0;touch-action:none;}
 #toolbar{position:absolute;bottom:0;left:0;width:100%;background:#fff;border-top:2px solid #ccc;padding:4px;box-sizing:border-box;}
 .row{display:flex;justify-content:space-between;margin-bottom:4px;}
 button{flex:1;margin:2px;padding:8px 0;font-size:12px;font-weight:bold;border-radius:6px;border:1px solid #555;cursor:pointer;}
 .color-btn{color:white;}
-.active-mode{border: 3px solid #000; box-shadow: 0 0 5px rgba(0,0,0,0.5);}
+.active-tool{outline: 3px solid black; outline-offset: -3px; box-shadow: 0 0 8px rgba(0,0,0,0.4);}
 </style>
 </head>
 
 <body>
 
 <div id="header">
-    <strong>ID:</strong>
-    <input type="number" id="patientId" placeholder="1234">
+    <strong>ID Paciente:</strong>
+    <input type="number" id="patientId" placeholder="0000">
 </div>
 
 <div id="mapWrapper">
@@ -34,26 +34,25 @@ button{flex:1;margin:2px;padding:8px 0;font-size:12px;font-weight:bold;border-ra
 
 <div id="toolbar">
     <div class="row">
-        <button class="color-btn" style="background:#009FE3" onclick="selectColor('#009FE3',false)">06</button>
-        <button class="color-btn" style="background:#E30613" onclick="selectColor('#E30613',false)">07</button>
-        <button class="color-btn" style="background:#E6007E" onclick="selectColor('#E6007E',false)">08</button>
-        <button style="background:#FFD500" onclick="selectColor('#FFD500',false)">09</button>
-        <button class="color-btn" style="background:#7CB518" onclick="selectColor('#7CB518',false)">011</button>
+        <button id="btn06" class="color-btn active-tool" style="background:#009FE3" onclick="selectTool('#009FE3',false, 'btn06')">06</button>
+        <button id="btn07" class="color-btn" style="background:#E30613" onclick="selectTool('#E30613',false, 'btn07')">07</button>
+        <button id="btn08" class="color-btn" style="background:#E6007E" onclick="selectTool('#E6007E',false, 'btn08')">08</button>
+        <button id="btn09" style="background:#FFD500" onclick="selectTool('#FFD500',false, 'btn09')">09</button>
+        <button id="btn011" class="color-btn" style="background:#7CB518" onclick="selectTool('#7CB518',false, 'btn011')">011</button>
     </div>
 
     <div class="row">
-        <button class="color-btn" style="background:#E30613" onclick="selectColor('#E30613',true)">405</button>
-        <button class="color-btn" style="background:#E83E8C" onclick="selectColor('#E83E8C',true)">406</button>
-        <button class="color-btn" style="background:#6F42C1" onclick="selectColor('#6F42C1',true)">408</button>
-        <button class="color-btn" style="background:#0B3C5D" onclick="selectColor('#0B3C5D',true)">410</button>
-        <button onclick="selectX()">X</button>
+        <button id="btn405" class="color-btn" style="background:#E30613" onclick="selectTool('#E30613',true, 'btn405')">405</button>
+        <button id="btn406" class="color-btn" style="background:#E83E8C" onclick="selectTool('#E83E8C',true, 'btn406')">406</button>
+        <button id="btn408" class="color-btn" style="background:#6F42C1" onclick="selectTool('#6F42C1',true, 'btn408')">408</button>
+        <button id="btn410" class="color-btn" style="background:#0B3C5D" onclick="selectTool('#0B3C5D',true, 'btn410')">410</button>
+        <button id="btnX" onclick="selectX('btnX')">X</button>
     </div>
 
     <div class="row">
-        <button id="btnErase" onclick="selectEraser()">🧽</button>
-        <button onclick="undo()">↩</button>
-        <button onclick="saveImage()">💾</button>
-        <button onclick="selectFree()">✏</button>
+        <button id="btnErase" onclick="selectEraser('btnErase')">🧽</button>
+        <button onclick="undo()">↩ Deshacer</button>
+        <button onclick="saveImage()" style="background:#28a745; color:white; border:none;">💾 Guardar</button>
     </div>
 </div>
 
@@ -62,13 +61,17 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const bg = document.getElementById("bg");
 
-let color = "#000";
-let mode = "arrow";
-let history = [];
-let isPerio = false;
-let drawing = false;
-let elements = [];
+// VARIABLES GLOBALES DE ESTADO (La "Herramienta Activa")
+let currentConfig = {
+    color: "#009FE3",
+    isPerio: false,
+    mode: "arrow" // arrow, drawX, erase
+};
 
+let elements = []; // Nuestra "Base de Datos" de objetos interactivos
+let history = [];
+
+// INICIALIZACIÓN
 bg.onload = resizeCanvas;
 if (bg.complete) resizeCanvas();
 window.onresize = resizeCanvas;
@@ -81,108 +84,84 @@ function resizeCanvas() {
     redrawAll();
 }
 
-function saveState() {
-    history.push(JSON.stringify(elements));
-    if(history.length > 30) history.shift();
+// SELECCIÓN DE HERRAMIENTAS
+function selectTool(color, perio, btnId) {
+    currentConfig.color = color;
+    currentConfig.isPerio = perio;
+    currentConfig.mode = "arrow";
+    highlightBtn(btnId);
 }
 
-function undo() {
-    if(history.length > 0) {
-        elements = JSON.parse(history.pop());
-        redrawAll();
+function selectX(btnId) {
+    currentConfig.mode = "drawX";
+    highlightBtn(btnId);
+}
+
+function selectEraser(btnId) {
+    currentConfig.mode = "erase";
+    highlightBtn(btnId);
+}
+
+function highlightBtn(id) {
+    document.querySelectorAll("#toolbar button").forEach(b => b.classList.remove("active-tool"));
+    document.getElementById(id).classList.add("active-tool");
+}
+
+// GESTIÓN DE EVENTOS TÁCTILES
+canvas.addEventListener("touchstart", function(e) {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const pos = {
+        x: e.touches[0].clientX - rect.left,
+        y: e.touches[0].clientY - rect.top
+    };
+
+    saveHistory();
+
+    if (currentConfig.mode === "erase") {
+        // Borrar: Filtramos los elementos que estén lejos del toque
+        elements = elements.filter(el => Math.hypot(el.x - pos.x, el.y - pos.y) > 20);
+    } 
+    else {
+        // BUSCAR SI YA EXISTE UN OBJETO EN ESA POSICIÓN (Detección de colisión)
+        const existingIndex = elements.findIndex(el => Math.hypot(el.x - pos.x, el.y - pos.y) < 20);
+
+        if (existingIndex !== -1) {
+            // RECLASIFICACIÓN: Si existe, actualizamos sus propiedades con la herramienta activa
+            elements[existingIndex].type = currentConfig.mode;
+            elements[existingIndex].color = currentConfig.color;
+            elements[existingIndex].isPerio = currentConfig.isPerio;
+        } else {
+            // CREACIÓN: Si no hay nada cerca, añadimos un nuevo objeto
+            elements.push({
+                type: currentConfig.mode,
+                x: pos.x,
+                y: pos.y,
+                color: currentConfig.color,
+                isPerio: currentConfig.isPerio
+            });
+        }
     }
-}
+    redrawAll();
+});
 
+// MOTOR DE RENDERIZADO (Dibuja la base de datos de objetos)
 function redrawAll() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     elements.forEach(el => {
-        if(el.type === "arrow") drawArrowFunc(el);
-        else if(el.type === "drawX") drawXFunc(el);
-        else if(el.type === "free") drawFreeFunc(el);
+        if (el.type === "arrow") drawArrow(el);
+        else if (el.type === "drawX") drawX(el);
     });
 }
 
-function selectColor(c, perio) {
-    color = c;
-    mode = "arrow";
-    isPerio = perio;
-    resetButtonStyles();
-}
-
-function selectX() { mode = "drawX"; resetButtonStyles(); }
-function selectEraser() { mode = "erase"; resetButtonStyles(); document.getElementById("btnErase").classList.add("active-mode"); }
-function selectFree() { mode = "free"; color = "#000"; resetButtonStyles(); }
-
-function resetButtonStyles() {
-    document.querySelectorAll("#toolbar button").forEach(b => b.classList.remove("active-mode"));
-}
-
-function getTouchPos(e) {
-    const rect = canvas.getBoundingClientRect();
-    const touch = e.touches[0];
-    return { x: touch.clientX - rect.left, y: touch.clientY - rect.top };
-}
-
-canvas.addEventListener("touchstart", function(e) {
-    e.preventDefault();
-    const pos = getTouchPos(e);
-    
-    if (mode === "erase") {
-        saveState();
-        drawing = true;
-        doErase(pos.x, pos.y);
-    } else if (mode === "free") {
-        saveState();
-        drawing = true;
-        elements.push({ type: "free", points: [pos], color: color });
-    } else if (mode === "arrow" || mode === "drawX") {
-        const index = elements.findIndex(el => Math.hypot(el.x - pos.x, el.y - pos.y) < 15);
-        saveState();
-        if (index !== -1 && elements[index].type === mode) {
-            elements[index].color = color;
-            elements[index].isPerio = isPerio;
-        } else {
-            elements.push({ type: mode, x: pos.x, y: pos.y, color: color, isPerio: isPerio });
-        }
-        redrawAll();
-    }
-});
-
-canvas.addEventListener("touchmove", function(e) {
-    const pos = getTouchPos(e);
-    if(mode === "erase" && drawing) {
-        doErase(pos.x, pos.y);
-    } else if(mode === "free" && drawing) {
-        elements[elements.length - 1].points.push(pos);
-        redrawAll();
-    }
-});
-
-canvas.addEventListener("touchend", function() { drawing = false; });
-
-function doErase(x, y) {
-    const threshold = 15;
-    elements = elements.filter(el => {
-        if (el.type === "free") return true; 
-        return Math.hypot(el.x - x, el.y - y) > threshold;
-    });
-    ctx.clearRect(x - 10, y - 10, 20, 20); 
-    redrawAll();
-}
-
-function drawArrowFunc(el) {
-    const midY = canvas.height * 0.46; // Punto central del mapa elíptico
+function drawArrow(el) {
+    const midY = canvas.height * 0.46;
+    const midX = canvas.width / 2;
     const length = canvas.height * 0.045;
     
-    // Calculamos el ángulo desde el centro para que sea radial
-    let angle = Math.atan2(el.y - midY, el.x - (canvas.width / 2));
-    
-    // LÓGICA DE ORIENTACIÓN CORREGIDA:
-    // La flecha debe apuntar hacia el "borde" donde están los dientes.
-    // En la parte superior, apunta hacia afuera (hacia arriba).
-    // En la parte inferior, apunta hacia afuera (hacia abajo en el dibujo).
-    // Nota: El mapa de Curaprox muestra los dientes inferiores en la parte baja,
-    // por lo tanto, la flecha debe alejarse del centro midY.
+    // Ángulo radial desde el centro
+    let angle = Math.atan2(el.y - midY, el.x - midX);
+    // Orientación: Superior (arriba), Inferior (abajo)
     let direction = (el.y < midY) ? -1 : 1;
 
     const endX = el.x + Math.cos(angle) * (length * direction);
@@ -192,11 +171,13 @@ function drawArrowFunc(el) {
     ctx.fillStyle = el.color;
     ctx.lineWidth = 3;
 
+    // Línea
     ctx.beginPath();
     ctx.moveTo(el.x, el.y);
     ctx.lineTo(endX, endY);
     ctx.stroke();
 
+    // Punta
     const headSize = length * 0.4;
     const arrowAngle = Math.atan2(endY - el.y, endX - el.x);
     ctx.beginPath();
@@ -206,50 +187,49 @@ function drawArrowFunc(el) {
     ctx.closePath();
     ctx.fill();
 
-    if(el.isPerio) {
+    // Etiqueta PERIO
+    if (el.isPerio) {
         ctx.font = "bold 13px Arial";
         ctx.fillText("P", el.x + 5, el.y - 5);
     }
 }
 
-function drawXFunc(el) {
-    const size = 8;
+function drawX(el) {
+    const s = 8;
     ctx.strokeStyle = "black";
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(el.x - size, el.y - size); ctx.lineTo(el.x + size, el.y + size);
-    ctx.moveTo(el.x + size, el.y - size); ctx.lineTo(el.x - size, el.y + size);
+    ctx.moveTo(el.x - s, el.y - s); ctx.lineTo(el.x + s, el.y + s);
+    ctx.moveTo(el.x + s, el.y - s); ctx.lineTo(el.x - s, el.y + s);
     ctx.stroke();
 }
 
-function drawFreeFunc(el) {
-    if (el.points.length < 2) return;
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = el.color;
-    ctx.beginPath();
-    ctx.moveTo(el.points[0].x, el.points[0].y);
-    for(let i=1; i<el.points.length; i++) {
-        ctx.lineTo(el.points[i].x, el.points[i].y);
+function undo() {
+    if (history.length > 0) {
+        elements = JSON.parse(history.pop());
+        redrawAll();
     }
-    ctx.stroke();
+}
+
+function saveHistory() {
+    history.push(JSON.stringify(elements));
+    if (history.length > 30) history.shift();
 }
 
 function saveImage() {
     const temp = document.createElement("canvas");
-    temp.width = canvas.width;
-    temp.height = canvas.height;
-    const t = temp.getContext("2d");
-    t.fillStyle = "#fff";
-    t.fillRect(0,0,temp.width,temp.height);
-    t.drawImage(bg, 0, 0, temp.width, temp.height);
-    t.drawImage(canvas, 0, 0);
-    const pid = document.getElementById("patientId").value;
+    temp.width = canvas.width; temp.height = canvas.height;
+    const tctx = temp.getContext("2d");
+    tctx.fillStyle = "white";
+    tctx.fillRect(0,0,temp.width,temp.height);
+    tctx.drawImage(bg, 0, 0, temp.width, temp.height);
+    tctx.drawImage(canvas, 0, 0);
+    
     const link = document.createElement("a");
     link.href = temp.toDataURL("image/png");
-    link.download = "calibracion_" + (pid || "curaprox") + ".png";
+    link.download = `clinica_id_${document.getElementById('patientId').value || '000'}.png`;
     link.click();
 }
 </script>
-
 </body>
 </html>
