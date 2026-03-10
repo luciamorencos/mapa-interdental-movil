@@ -74,52 +74,36 @@ if(bg.complete)resizeCanvas();
 window.onresize=resizeCanvas;
 
 function resizeCanvas(){
-
 canvas.width=bg.clientWidth;
 canvas.height=bg.clientHeight;
-
 canvas.style.left=bg.offsetLeft+"px";
 canvas.style.top=bg.offsetTop+"px";
-
 redrawAll();
-
 }
 
 function selectTool(c,p,id){
-
 config.color=c;
 config.isPerio=p;
 config.mode="arrow";
-
 highlight(id);
-
 }
 
 function selectMode(m,id){
-
 config.mode=m;
 highlight(id);
-
 }
 
 function highlight(id){
-
 document.querySelectorAll("#toolbar button").forEach(b=>b.classList.remove("active-tool"));
 document.getElementById(id).classList.add("active-tool");
-
 }
 
 function getPos(e){
-
 const r=canvas.getBoundingClientRect();
-
 return{
-
 x:e.touches[0].clientX-r.left,
 y:e.touches[0].clientY-r.top
-
 };
-
 }
 
 canvas.addEventListener("touchstart",function(e){
@@ -130,17 +114,13 @@ const pos=getPos(e);
 saveState();
 
 if(config.mode==="free"){
-
 drawing=true;
 elements.push({type:"free",color:"#000",points:[pos]});
-
 }
 
 else if(config.mode==="erase"){
-
 drawing=true;
 doErase(pos.x,pos.y);
-
 }
 
 else{
@@ -153,18 +133,14 @@ elements[idx].color=config.color;
 elements[idx].isPerio=config.isPerio;
 elements[idx].type=config.mode;
 
-}
-
-else{
+}else{
 
 elements.push({
-
 type:config.mode,
 x:pos.x,
 y:pos.y,
 color:config.color,
 isPerio:config.isPerio
-
 });
 
 }
@@ -182,17 +158,13 @@ const pos=getPos(e);
 if(!drawing)return;
 
 if(config.mode==="free"){
-
 elements[elements.length-1].points.push(pos);
 redrawAll();
-
 }
 
 else if(config.mode==="erase"){
-
 doErase(pos.x,pos.y);
 redrawAll();
-
 }
 
 });
@@ -204,10 +176,8 @@ function doErase(x,y){
 elements=elements.filter(el=>{
 
 if(el.type==="free"){
-
 el.points=el.points.filter(p=>Math.hypot(p.x-x,p.y-y)>12);
 return el.points.length>1;
-
 }
 
 return Math.hypot(el.x-x,el.y-y)>15;
@@ -236,12 +206,12 @@ const midY=canvas.height*0.46;
 const midX=canvas.width/2;
 const length=canvas.height*0.05;
 
-/* VECTOR CORRECTO (flechas hacia el diente) */
-
+/* vector desde el centro hacia el punto */
 let angle=Math.atan2(el.y-midY,el.x-midX);
 
-const ex=el.x+Math.cos(angle)*length;
-const ey=el.y+Math.sin(angle)*length;
+/* flecha desde fuera hacia el diente */
+const ex=el.x-Math.cos(angle)*length;
+const ey=el.y-Math.sin(angle)*length;
 
 ctx.strokeStyle=el.color;
 ctx.fillStyle=el.color;
@@ -263,10 +233,8 @@ ctx.closePath();
 ctx.fill();
 
 if(el.isPerio){
-
 ctx.font="bold 13px Arial";
 ctx.fillText("P",el.x+5,el.y-5);
-
 }
 
 }
@@ -304,22 +272,15 @@ ctx.stroke();
 }
 
 function saveState(){
-
 history.push(JSON.stringify(elements));
-
 if(history.length>20)history.shift();
-
 }
 
 function undo(){
-
 if(history.length>0){
-
 elements=JSON.parse(history.pop());
 redrawAll();
-
 }
-
 }
 
 function saveImage(){
@@ -338,10 +299,8 @@ tc.drawImage(bg,0,0,t.width,t.height);
 tc.drawImage(canvas,0,0);
 
 const a=document.createElement("a");
-
 a.href=t.toDataURL("image/png");
 a.download="calibracion.png";
-
 a.click();
 
 }
