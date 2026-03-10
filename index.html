@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Mapa Calibración - Corrección Definitiva</title>
+<title>Mapa Calibración - Vectores Corregidos</title>
 
 <style>
 html,body{margin:0;padding:0;height:100%;overflow:hidden;font-family:Arial,sans-serif;background:#f2f2f2;}
@@ -158,13 +158,14 @@ function drawArrowFunc(el) {
     const midX = canvas.width / 2;
     const length = canvas.height * 0.05;
     
-    // Calculamos el ángulo radial
+    // Ángulo radial
     let angle = Math.atan2(el.y - midY, el.x - midX);
     
-    // CORRECCIÓN CLAVE:
-    // Tanto arriba como abajo del centro (midY), queremos que la flecha 
-    // se dibuje HACIA el interior de la arcada (hacia el centro vertical).
-    let direction = (el.y < midY) ? 1 : -1;
+    // LÓGICA DE ESPEJO:
+    // Superior (el.y < midY): Queremos que suba -> Dirección negativa respecto al centro (-1)
+    // Inferior (el.y > midY): Queremos que baje -> Dirección positiva respecto al centro (1)
+    // En el dibujo Curaprox, "afuera" de la elipse siempre es hacia el diente.
+    let direction = (el.y < midY) ? -1 : 1;
 
     const ex = el.x + Math.cos(angle) * (length * direction);
     const ey = el.y + Math.sin(angle) * (length * direction);
@@ -209,11 +210,4 @@ function saveImage() {
     const tc = t.getContext("2d");
     tc.fillStyle = "white"; tc.fillRect(0,0,t.width,t.height);
     tc.drawImage(bg, 0, 0, t.width, t.height);
-    tc.drawImage(canvas, 0, 0);
-    const a = document.createElement("a");
-    a.href = t.toDataURL("image/png");
-    a.download = "calibracion.png"; a.click();
-}
-</script>
-</body>
-</html>
+    tc
