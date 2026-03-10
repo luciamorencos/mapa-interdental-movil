@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Mapa Calibración - Móvil Clínico</title>
+<title>Mapa Calibración - Corrección Inferior</title>
 
 <style>
 html,body{margin:0;padding:0;height:100%;overflow:hidden;font-family:Arial,sans-serif;background:#f2f2f2;}
@@ -67,8 +67,6 @@ let mode = "arrow";
 let history = [];
 let isPerio = false;
 let drawing = false;
-
-// Lista para almacenar objetos dibujados y permitir redibujado interactivo
 let elements = [];
 
 bg.onload = resizeCanvas;
@@ -138,16 +136,12 @@ canvas.addEventListener("touchstart", function(e) {
         drawing = true;
         elements.push({ type: "free", points: [pos], color: color });
     } else if (mode === "arrow" || mode === "drawX") {
-        // Detectar si pulsamos cerca de una flecha o X existente para cambiar color
         const index = elements.findIndex(el => Math.hypot(el.x - pos.x, el.y - pos.y) < 15);
-        
         saveState();
         if (index !== -1 && elements[index].type === mode) {
-            // Actualizar existente
             elements[index].color = color;
             elements[index].isPerio = isPerio;
         } else {
-            // Crear nueva
             elements.push({ type: mode, x: pos.x, y: pos.y, color: color, isPerio: isPerio });
         }
         redrawAll();
@@ -168,21 +162,27 @@ canvas.addEventListener("touchend", function() { drawing = false; });
 
 function doErase(x, y) {
     const threshold = 15;
-    const prevLen = elements.length;
     elements = elements.filter(el => {
-        if (el.type === "free") return true; // El borrado de trazo libre es complejo, lo mantenemos simple
+        if (el.type === "free") return true; 
         return Math.hypot(el.x - x, el.y - y) > threshold;
     });
-    // Para trazo libre y general, usamos clearRect visual
     ctx.clearRect(x - 10, y - 10, 20, 20); 
-    if(elements.length !== prevLen) redrawAll();
+    redrawAll();
 }
 
 function drawArrowFunc(el) {
-    const midY = canvas.height * 0.46; 
-    const midX = canvas.width / 2;
+    const midY = canvas.height * 0.46; // Punto central del mapa elíptico
     const length = canvas.height * 0.045;
-    let angle = Math.atan2(el.y - midY, el.x - midX);
+    
+    // Calculamos el ángulo desde el centro para que sea radial
+    let angle = Math.atan2(el.y - midY, el.x - (canvas.width / 2));
+    
+    // LÓGICA DE ORIENTACIÓN CORREGIDA:
+    // La flecha debe apuntar hacia el "borde" donde están los dientes.
+    // En la parte superior, apunta hacia afuera (hacia arriba).
+    // En la parte inferior, apunta hacia afuera (hacia abajo en el dibujo).
+    // Nota: El mapa de Curaprox muestra los dientes inferiores en la parte baja,
+    // por lo tanto, la flecha debe alejarse del centro midY.
     let direction = (el.y < midY) ? -1 : 1;
 
     const endX = el.x + Math.cos(angle) * (length * direction);
