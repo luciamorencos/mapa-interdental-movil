@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mapa Calibración Interdental</title>
+
+<style>
+body{
+font-family:Arial, sans-serif;
+margin:0;
+background:#f5f5f5;
+text-align:center;
+}
+
+header{
+padding:10px;
+font-weight:bold;
+font-size:20px;
+}
+
+#mapa_container{
+position:relative;
+max-width:900px;
+margin:auto;
+}
+
+#mapa{
+width:100%;
+display:block;
+}
+
+/* flechas predefinidas */
+
+.flecha{
+position:absolute;
+font-size:28px;
+opacity:0;
+transition:0.15s;
+pointer-events:none;
+}
+
+.flecha.visible{
+opacity:1;
+}
+
+/* zonas táctiles */
+
+.zona{
+position:absolute;
+width:60px;
+height:60px;
+cursor:pointer;
+}
+
+/* colores PRIME */
+
+.prime1{color:#00AEEF;}
+.prime2{color:#009688;}
+.prime3{color:#4CAF50;}
+.prime4{color:#8BC34A;}
+.prime5{color:#CDDC39;}
+
+/* colores PERIO */
+
+.perio1{color:#E53935;}
+.perio2{color:#FB8C00;}
+.perio3{color:#8E24AA;}
+.perio4{color:#5E35B1;}
+
+#colores{
+margin:10px;
+}
+
+button{
+margin:4px;
+padding:6px 10px;
+}
+</style>
+</head>
+
+<body>
+
+<header>Mapa calibrado interdental</header>
+
+<div id="colores">
+
+<b>PRIME</b><br>
+
+<button onclick="setColor('prime1')" style="background:#00AEEF"></button>
+<button onclick="setColor('prime2')" style="background:#009688"></button>
+<button onclick="setColor('prime3')" style="background:#4CAF50"></button>
+<button onclick="setColor('prime4')" style="background:#8BC34A"></button>
+<button onclick="setColor('prime5')" style="background:#CDDC39"></button>
+
+<br><br>
+
+<b>PERIO</b><br>
+
+<button onclick="setColor('perio1')" style="background:#E53935"></button>
+<button onclick="setColor('perio2')" style="background:#FB8C00"></button>
+<button onclick="setColor('perio3')" style="background:#8E24AA"></button>
+<button onclick="setColor('perio4')" style="background:#5E35B1"></button>
+
+</div>
+
+<div id="mapa_container">
+
+<img id="mapa" src="mapa_base.png">
+
+<div id="f1" class="flecha" style="top:40%; left:30%;">➤</div>
+<div id="f2" class="flecha" style="top:40%; left:50%;">➤</div>
+<div id="f3" class="flecha" style="top:40%; left:70%;">➤</div>
+
+<div class="zona" data-f="f1" style="top:38%; left:28%;"></div>
+<div class="zona" data-f="f2" style="top:38%; left:48%;"></div>
+<div class="zona" data-f="f3" style="top:38%; left:68%;"></div>
+
+</div>
+
+<script>
+let colorActual = "prime1"
+
+function setColor(c){
+colorActual = c
+}
+
+document.querySelectorAll(".zona").forEach(z=>{
+
+z.addEventListener("click",()=>{
+
+const id = z.dataset.f
+const flecha = document.getElementById(id)
+
+flecha.className = "flecha visible " + colorActual
+
+})
+
+})
+</script>
+
+</body>
+</html>
