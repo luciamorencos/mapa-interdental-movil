@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Mapa Calibración - Versión Final Corregida</title>
+<title>Mapa Calibración - Corrección Definitiva</title>
 
 <style>
 html,body{margin:0;padding:0;height:100%;overflow:hidden;font-family:Arial,sans-serif;background:#f2f2f2;}
@@ -91,6 +91,11 @@ function highlight(id) {
     document.getElementById(id).classList.add("active-tool");
 }
 
+function getPos(e) {
+    const r = canvas.getBoundingClientRect();
+    return { x: e.touches[0].clientX - r.left, y: e.touches[0].clientY - r.top };
+}
+
 canvas.addEventListener("touchstart", function(e) {
     e.preventDefault();
     const pos = getPos(e);
@@ -103,7 +108,6 @@ canvas.addEventListener("touchstart", function(e) {
         drawing = true;
         doErase(pos.x, pos.y);
     } else {
-        // Lógica de Reclasificación o Creación
         const idx = elements.findIndex(el => el.type !== "free" && Math.hypot(el.x - pos.x, el.y - pos.y) < 20);
         if (idx !== -1) {
             elements[idx].color = config.color;
@@ -130,15 +134,10 @@ canvas.addEventListener("touchmove", function(e) {
 
 canvas.addEventListener("touchend", () => drawing = false);
 
-function getPos(e) {
-    const r = canvas.getBoundingClientRect();
-    return { x: e.touches[0].clientX - r.left, y: e.touches[0].clientY - r.top };
-}
-
 function doErase(x, y) {
     elements = elements.filter(el => {
         if (el.type === "free") {
-            el.points = el.points.filter(p => Math.hypot(p.x - x, p.y - y) > 10);
+            el.points = el.points.filter(p => Math.hypot(p.x - x, p.y - y) > 12);
             return el.points.length > 1;
         }
         return Math.hypot(el.x - x, el.y - y) > 15;
@@ -148,26 +147,24 @@ function doErase(x, y) {
 function redrawAll() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     elements.forEach(el => {
-        if (el.type === "arrow") drawArrow(el);
-        else if (el.type === "drawX") drawX(el);
-        else if (el.type === "free") drawFree(el);
+        if (el.type === "arrow") drawArrowFunc(el);
+        else if (el.type === "drawX") drawXFunc(el);
+        else if (el.type === "free") drawFreeFunc(el);
     });
 }
 
-function drawArrow(el) {
+function drawArrowFunc(el) {
     const midY = canvas.height * 0.46;
     const midX = canvas.width / 2;
-    const length = canvas.height * 0.045;
+    const length = canvas.height * 0.05;
     
-    // Ángulo desde el centro
+    // Calculamos el ángulo radial
     let angle = Math.atan2(el.y - midY, el.x - midX);
     
-    // CORRECCIÓN DEFINITIVA INFERIOR:
-    // En el mapa Curaprox, los dientes inferiores están "mirando" al centro.
-    // La flecha debe nacer en el toque y apuntar HACIA el diente.
-    // Superior: Tocar abajo del diente -> flecha sube (-1)
-    // Inferior: Tocar arriba del diente -> flecha baja (1)
-    let direction = (el.y < midY) ? -1 : 1;
+    // CORRECCIÓN CLAVE:
+    // Tanto arriba como abajo del centro (midY), queremos que la flecha 
+    // se dibuje HACIA el interior de la arcada (hacia el centro vertical).
+    let direction = (el.y < midY) ? 1 : -1;
 
     const ex = el.x + Math.cos(angle) * (length * direction);
     const ey = el.y + Math.sin(angle) * (length * direction);
@@ -189,27 +186,22 @@ function drawArrow(el) {
     }
 }
 
-function drawX(el) {
-    const s = 7; ctx.strokeStyle = "black"; ctx.lineWidth = 3;
+function drawXFunc(el) {
+    const s = 8; ctx.strokeStyle = "black"; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(el.x-s, el.y-s); ctx.lineTo(el.x+s, el.y+s);
     ctx.moveTo(el.x+s, el.y-s); ctx.lineTo(el.x-s, el.y+s); ctx.stroke();
 }
 
-function drawFree(el) {
+function drawFreeFunc(el) {
+    if (el.points.length < 2) return;
     ctx.strokeStyle = el.color; ctx.lineWidth = 2; ctx.beginPath();
     ctx.moveTo(el.points[0].x, el.points[0].y);
     el.points.forEach(p => ctx.lineTo(p.x, p.y));
     ctx.stroke();
 }
 
-function saveState() {
-    history.push(JSON.stringify(elements));
-    if (history.length > 20) history.shift();
-}
-
-function undo() {
-    if (history.length > 0) { elements = JSON.parse(history.pop()); redrawAll(); }
-}
+function saveState() { history.push(JSON.stringify(elements)); if (history.length > 20) history.shift(); }
+function undo() { if (history.length > 0) { elements = JSON.parse(history.pop()); redrawAll(); } }
 
 function saveImage() {
     const t = document.createElement("canvas");
