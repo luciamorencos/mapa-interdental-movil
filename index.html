@@ -1,0 +1,157 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mapa calibración interdental</title>
+
+<style>
+
+body{
+font-family:Arial, sans-serif;
+background:#f4f4f4;
+text-align:center;
+margin:0;
+padding:10px;
+}
+
+h2{
+margin-bottom:10px;
+}
+
+.selector button{
+padding:10px 14px;
+margin:4px;
+font-size:16px;
+border:none;
+border-radius:6px;
+background:#333;
+color:white;
+}
+
+.mapa{
+position:relative;
+max-width:650px;
+margin:auto;
+}
+
+.mapa img{
+width:100%;
+display:block;
+}
+
+.flecha{
+position:absolute;
+width:28px;
+transform:translate(-50%,-50%);
+opacity:0;
+pointer-events:none;
+transition:opacity 0.2s;
+}
+
+.zona{
+position:absolute;
+width:60px;
+height:60px;
+transform:translate(-50%,-50%);
+cursor:pointer;
+}
+
+.prime{ filter:hue-rotate(180deg); }
+.perio{ filter:hue-rotate(320deg); }
+
+</style>
+</head>
+
+<body>
+
+<h2>Mapa calibración interdental</h2>
+
+<div class="selector">
+<button onclick="setColor('prime')">PRIME</button>
+<button onclick="setColor('perio')">PERIO</button>
+</div>
+
+<div class="mapa">
+
+<img src="mapa.png">
+
+<!-- Flechas predefinidas (invisibles) -->
+
+<img src="flecha.svg" id="f1" class="flecha" style="left:50%;top:28%;transform:translate(-50%,-50%) rotate(0deg);">
+<img src="flecha.svg" id="f2" class="flecha" style="left:58%;top:31%;transform:translate(-50%,-50%) rotate(15deg);">
+<img src="flecha.svg" id="f3" class="flecha" style="left:66%;top:36%;transform:translate(-50%,-50%) rotate(30deg);">
+<img src="flecha.svg" id="f4" class="flecha" style="left:72%;top:42%;transform:translate(-50%,-50%) rotate(45deg);">
+<img src="flecha.svg" id="f5" class="flecha" style="left:73%;top:50%;transform:translate(-50%,-50%) rotate(60deg);">
+
+<img src="flecha.svg" id="f6" class="flecha" style="left:42%;top:31%;transform:translate(-50%,-50%) rotate(-15deg);">
+<img src="flecha.svg" id="f7" class="flecha" style="left:34%;top:36%;transform:translate(-50%,-50%) rotate(-30deg);">
+<img src="flecha.svg" id="f8" class="flecha" style="left:28%;top:42%;transform:translate(-50%,-50%) rotate(-45deg);">
+<img src="flecha.svg" id="f9" class="flecha" style="left:27%;top:50%;transform:translate(-50%,-50%) rotate(-60deg);">
+
+<img src="flecha.svg" id="f10" class="flecha" style="left:48%;top:72%;transform:translate(-50%,-50%) rotate(0deg);">
+<img src="flecha.svg" id="f11" class="flecha" style="left:40%;top:69%;transform:translate(-50%,-50%) rotate(-20deg);">
+<img src="flecha.svg" id="f12" class="flecha" style="left:34%;top:65%;transform:translate(-50%,-50%) rotate(-40deg);">
+<img src="flecha.svg" id="f13" class="flecha" style="left:31%;top:60%;transform:translate(-50%,-50%) rotate(-55deg);">
+
+<img src="flecha.svg" id="f14" class="flecha" style="left:52%;top:72%;transform:translate(-50%,-50%) rotate(0deg);">
+<img src="flecha.svg" id="f15" class="flecha" style="left:60%;top:69%;transform:translate(-50%,-50%) rotate(20deg);">
+<img src="flecha.svg" id="f16" class="flecha" style="left:66%;top:65%;transform:translate(-50%,-50%) rotate(40deg);">
+<img src="flecha.svg" id="f17" class="flecha" style="left:69%;top:60%;transform:translate(-50%,-50%) rotate(55deg);">
+
+<!-- Zonas táctiles -->
+
+<div class="zona" data-f="f1" style="left:50%;top:28%"></div>
+<div class="zona" data-f="f2" style="left:58%;top:31%"></div>
+<div class="zona" data-f="f3" style="left:66%;top:36%"></div>
+<div class="zona" data-f="f4" style="left:72%;top:42%"></div>
+<div class="zona" data-f="f5" style="left:73%;top:50%"></div>
+
+<div class="zona" data-f="f6" style="left:42%;top:31%"></div>
+<div class="zona" data-f="f7" style="left:34%;top:36%"></div>
+<div class="zona" data-f="f8" style="left:28%;top:42%"></div>
+<div class="zona" data-f="f9" style="left:27%;top:50%"></div>
+
+<div class="zona" data-f="f10" style="left:48%;top:72%"></div>
+<div class="zona" data-f="f11" style="left:40%;top:69%"></div>
+<div class="zona" data-f="f12" style="left:34%;top:65%"></div>
+<div class="zona" data-f="f13" style="left:31%;top:60%"></div>
+
+<div class="zona" data-f="f14" style="left:52%;top:72%"></div>
+<div class="zona" data-f="f15" style="left:60%;top:69%"></div>
+<div class="zona" data-f="f16" style="left:66%;top:65%"></div>
+<div class="zona" data-f="f17" style="left:69%;top:60%"></div>
+
+</div>
+
+<script>
+
+let colorActual="prime";
+
+function setColor(c){
+colorActual=c;
+}
+
+document.querySelectorAll(".zona").forEach(z=>{
+
+z.addEventListener("click",()=>{
+
+let flecha=document.getElementById(z.dataset.f);
+
+if(flecha.style.opacity=="1"){
+flecha.style.opacity="0";
+}else{
+flecha.style.opacity="1";
+flecha.classList.remove("prime","perio");
+flecha.classList.add(colorActual);
+}
+
+});
+
+});
+
+</script>
+
+</body>
+</html>
