@@ -110,7 +110,6 @@ canvas.addEventListener("touchstart",function(e){
 
 e.preventDefault();
 const pos=getPos(e);
-
 saveState();
 
 if(config.mode==="free"){
@@ -125,7 +124,7 @@ doErase(pos.x,pos.y);
 
 else{
 
-/* AQUÍ ESTÁ LA CORRECCIÓN */
+/* radio reducido para sector anterior */
 const idx=elements.findIndex(el=>el.type!=="free" && Math.hypot(el.x-pos.x,el.y-pos.y)<10);
 
 if(idx!==-1){
@@ -151,3 +150,158 @@ isPerio:config.isPerio
 redrawAll();
 
 });
+
+canvas.addEventListener("touchmove",function(e){
+
+const pos=getPos(e);
+
+if(!drawing)return;
+
+if(config.mode==="free"){
+elements[elements.length-1].points.push(pos);
+redrawAll();
+}
+
+else if(config.mode==="erase"){
+doErase(pos.x,pos.y);
+redrawAll();
+}
+
+});
+
+canvas.addEventListener("touchend",()=>drawing=false);
+
+function doErase(x,y){
+
+elements=elements.filter(el=>{
+
+if(el.type==="free"){
+el.points=el.points.filter(p=>Math.hypot(p.x-x,p.y-y)>12);
+return el.points.length>1;
+}
+
+return Math.hypot(el.x-x,el.y-y)>15;
+
+});
+
+}
+
+function redrawAll(){
+
+ctx.clearRect(0,0,canvas.width,canvas.height);
+
+elements.forEach(el=>{
+
+if(el.type==="arrow")drawArrow(el);
+else if(el.type==="drawX")drawX(el);
+else if(el.type==="free")drawFree(el);
+
+});
+
+}
+
+function drawArrow(el){
+
+const midY=canvas.height*0.46;
+const midX=canvas.width/2;
+const length=canvas.height*0.05;
+
+/* flechas desde fuera hacia el diente */
+
+let angle=Math.atan2(el.y-midY,el.x-midX);
+
+const ex=el.x-Math.cos(angle)*length;
+const ey=el.y-Math.sin(angle)*length;
+
+ctx.strokeStyle=el.color;
+ctx.fillStyle=el.color;
+ctx.lineWidth=3;
+
+ctx.beginPath();
+ctx.moveTo(el.x,el.y);
+ctx.lineTo(ex,ey);
+ctx.stroke();
+
+const head=length*0.4;
+const a=Math.atan2(ey-el.y,ex-el.x);
+
+ctx.beginPath();
+ctx.moveTo(ex,ey);
+ctx.lineTo(ex-head*Math.cos(a-0.5),ey-head*Math.sin(a-0.5));
+ctx.lineTo(ex-head*Math.cos(a+0.5),ey-head*Math.sin(a+0.5));
+ctx.closePath();
+ctx.fill();
+
+if(el.isPerio){
+ctx.font="bold 13px Arial";
+ctx.fillText("P",el.x+5,el.y-5);
+}
+
+}
+
+function drawX(el){
+
+const s=8;
+ctx.strokeStyle="black";
+ctx.lineWidth=3;
+
+ctx.beginPath();
+ctx.moveTo(el.x-s,el.y-s);
+ctx.lineTo(el.x+s,el.y+s);
+ctx.moveTo(el.x+s,el.y-s);
+ctx.lineTo(el.x-s,el.y+s);
+ctx.stroke();
+
+}
+
+function drawFree(el){
+
+if(el.points.length<2)return;
+
+ctx.strokeStyle=el.color;
+ctx.lineWidth=2;
+
+ctx.beginPath();
+ctx.moveTo(el.points[0].x,el.points[0].y);
+el.points.forEach(p=>ctx.lineTo(p.x,p.y));
+ctx.stroke();
+
+}
+
+function saveState(){
+history.push(JSON.stringify(elements));
+if(history.length>20)history.shift();
+}
+
+function undo(){
+if(history.length>0){
+elements=JSON.parse(history.pop());
+redrawAll();
+}
+}
+
+function saveImage(){
+
+const t=document.createElement("canvas");
+
+t.width=canvas.width;
+t.height=canvas.height;
+
+const tc=t.getContext("2d");
+
+tc.fillStyle="white";
+tc.fillRect(0,0,t.width,t.height);
+
+tc.drawImage(bg,0,0,t.width,t.height);
+tc.drawImage(canvas,0,0);
+
+const a=document.createElement("a");
+a.href=t.toDataURL("image/png");
+a.download="calibracion.png";
+a.click();
+
+}
+
+</script>
+</body>
+</html>
